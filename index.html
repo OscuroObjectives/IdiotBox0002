@@ -107,7 +107,7 @@
     </button>
 
     <div id="status">
-        Ready.
+        Connecting to IdiotBox...
     </div>
 
 
@@ -351,6 +351,47 @@
                 }
             }
         }
+
+        // ======================================================
+// LIVE IDIOTBOX CONNECTION STATUS
+// ======================================================
+
+const STATUS_URL =
+    "https://idiotbox-server.onrender.com/api/box-status/BOX-0002";
+
+async function checkIdiotBoxStatus() {
+    const statusElement = document.getElementById("status");
+
+    try {
+        const response = await fetch(STATUS_URL, {
+            cache: "no-store"
+        });
+
+        if (!response.ok) {
+            throw new Error("Could not retrieve box status.");
+        }
+
+        const data = await response.json();
+
+        if (data.ready) {
+            statusElement.innerText = "Ready.";
+        } else {
+            statusElement.innerText = "IdiotBox offline.";
+        }
+
+    } catch (error) {
+        console.error("Status check failed:", error);
+
+        statusElement.innerText =
+            "Unable to verify IdiotBox connection.";
+    }
+}
+
+// Check immediately when the page loads.
+checkIdiotBoxStatus();
+
+// Check again every 3 seconds.
+setInterval(checkIdiotBoxStatus, 3000);
 
     </script>
 
