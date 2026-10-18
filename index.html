@@ -14,7 +14,7 @@
             font-family: Arial, sans-serif;
             text-align: center;
             margin: 0;
-            padding-top: 50px;
+            padding: 50px 15px 30px;
             background: #f4f4f4;
         }
 
@@ -25,7 +25,8 @@
         #controllerBox {
             background: white;
             width: 300px;
-            margin: 0 auto 30px auto;
+            max-width: calc(100% - 50px);
+            margin: 0 auto 25px;
             padding: 25px;
             border-radius: 15px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.15);
@@ -42,9 +43,42 @@
             color: #666;
         }
 
+        #messageBox {
+            width: 300px;
+            max-width: calc(100% - 32px);
+            margin: 0 auto 20px;
+        }
+
+        #messageLabel {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        #visitorMessage {
+            box-sizing: border-box;
+            width: 100%;
+            min-height: 110px;
+            padding: 12px;
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            resize: vertical;
+        }
+
+        #characterCount {
+            margin-top: 6px;
+            text-align: right;
+            color: #666;
+            font-size: 12px;
+        }
+
         button {
             display: block;
             width: 250px;
+            max-width: 100%;
             padding: 20px;
             margin: 20px auto;
             font-size: 24px;
@@ -75,9 +109,19 @@
         }
 
         #status {
-            margin-top: 30px;
+            margin: 30px auto 0;
+            max-width: 500px;
             font-size: 18px;
             font-weight: bold;
+            overflow-wrap: anywhere;
+        }
+
+        #privacyNote {
+            max-width: 450px;
+            margin: 12px auto;
+            color: #666;
+            font-size: 12px;
+            line-height: 1.5;
         }
     </style>
 </head>
@@ -90,8 +134,32 @@
         <div id="controllerLabel">IdiotBox Controller</div>
 
         <div id="blockchainLabel">
-            Blockchain Command Control
+            Blockchain Command Control · Monad
         </div>
+    </div>
+
+    <!-- WRITE WHAT YOU'RE WISHING FOR -->
+
+    <div id="messageBox">
+
+        <label id="messageLabel" for="visitorMessage">
+            Write What You're Wishing For
+        </label>
+
+        <textarea
+            id="visitorMessage"
+            maxlength="280"
+            placeholder="What are you wishing for? (Optional)"
+            oninput="updateCharacterCount()"
+        ></textarea>
+
+        <div id="characterCount">0 / 280 characters</div>
+
+    </div>
+
+    <div id="privacyNote">
+        Your wish will be recorded publicly on the blockchain.
+        Do not enter passwords or private information.
     </div>
 
     <button id="lockButton" onclick="sendLock()">
@@ -106,10 +174,7 @@
         RESET_IDIOTBOX_WIFI
     </button>
 
-    <div id="status">
-        Connecting to IdiotBox...
-    </div>
-
+    <div id="status">Ready.</div>
 
     <script>
 
@@ -118,12 +183,19 @@
         // ======================================================
 
         const contractAddress =
-            "0x37f7B5A92AF497b76F9709cD9ba1842a58BBc138";
+            "0xfcd859B68fFeB6763c66df954b19AEd7845a7Cf5";
+
+        // Monad Mainnet chain ID
+        const MONAD_CHAIN_ID = 143n;
 
         const contractABI = [
-            "function lock() public",
-            "function unlock() public",
-            "function resetIdiotBoxWiFi() public"
+            "function lock(string message) public",
+            "function unlock(string message) public",
+            "function resetIdiotBoxWiFi() public",
+
+            "event CommandIssued(uint256 indexed commandId, uint8 command, address indexed issuedBy)",
+
+            "event MessageWritten(uint256 indexed commandId, uint8 command, address indexed issuedBy, string message)"
         ];
 
 
@@ -137,44 +209,67 @@
 
 
         // ======================================================
+        // CHARACTER COUNT
+        // ======================================================
+
+        function updateCharacterCount() {
+            const message =
+                document.getElementById("visitorMessage").value;
+
+            document.getElementById("characterCount").innerText =
+                message.length + " / 280 characters";
+        }
+
+
+        // ======================================================
+        // GET WISH
+        // ======================================================
+
+        function getVisitorMessage() {
+            return document
+                .getElementById("visitorMessage")
+                .value
+                .trim();
+        }
+
+
+        // ======================================================
         // GET CONTRACT
         // ======================================================
 
         async function getContract() {
 
             if (!window.ethereum) {
-                alert("MetaMask is not installed.");
-                throw new Error("MetaMask is not installed.");
+                alert(
+                    "No compatible wallet detected. Open this page in your wallet's browser or use a browser with a compatible wallet."
+                );
+
+                throw new Error("Wallet not detected.");
             }
 
-            updateStatus("🦊 Opening MetaMask...");
+            updateStatus("🦊 Connecting to wallet...");
 
             const provider =
                 new ethers.BrowserProvider(window.ethereum);
 
-            await provider.send(
-                "eth_requestAccounts",
-                []
-            );
+            await provider.send("eth_requestAccounts", []);
 
-            const network =
-                await provider.getNetwork();
+            const network = await provider.getNetwork();
 
-            if (network.chainId !== 11155111n) {
+            if (network.chainId !== MONAD_CHAIN_ID) {
 
                 updateStatus(
-                    "🔴 Switch MetaMask to Sepolia."
+                    "🔴 Please switch your wallet to Monad Mainnet."
                 );
 
                 alert(
-                    "Please switch MetaMask to the Sepolia Testnet."
+                    "Please switch your wallet to Monad Mainnet before continuing."
                 );
 
-                throw new Error("Wrong network. Switch to Sepolia.");
+                throw new Error("Wrong network. Expected Monad Mainnet.");
             }
 
-            const signer =
-                await provider.getSigner();
+            const signer = await provider.getSigner();
 
             return new ethers.Contract(
                 contractAddress,
@@ -190,39 +285,31 @@
 
         async function sendLock() {
 
+            const button = document.getElementById("lockButton");
+
             try {
+                button.disabled = true;
 
-                const contract =
-                    await getContract();
+                const contract = await getContract();
+                const message = getVisitorMessage();
 
-                updateStatus(
-                    "🦊 Approve LOCK in MetaMask..."
-                );
+                updateStatus("🦊 Approve LOCK in your wallet...");
 
-                const transaction =
-                    await contract.lock();
+                const transaction = await contract.lock(message);
 
-                console.log(
-                    "LOCK transaction:",
-                    transaction.hash
-                );
+                console.log("LOCK transaction:", transaction.hash);
 
-                updateStatus(
-                    "⛓️ Waiting for blockchain confirmation..."
-                );
+                updateStatus("⛓️ Waiting for Monad confirmation...");
 
                 await transaction.wait();
 
-                updateStatus(
-                    "✅ LOCK confirmed on Sepolia"
-                );
+                updateStatus("✅ LOCK confirmed on Monad!");
+
+                document.getElementById("visitorMessage").value = "";
+                updateCharacterCount();
 
             } catch (error) {
-
-                console.error(
-                    "LOCK error:",
-                    error
-                );
+                console.error("LOCK error:", error);
 
                 if (
                     error.code === 4001 ||
@@ -230,8 +317,13 @@
                 ) {
                     updateStatus("❌ Transaction cancelled");
                 } else {
-                    updateStatus("❌ LOCK transaction failed");
+                    updateStatus(
+                        "❌ LOCK failed. Check the network, contract address, and wallet."
+                    );
                 }
+
+            } finally {
+                button.disabled = false;
             }
         }
 
@@ -242,39 +334,31 @@
 
         async function sendUnlock() {
 
+            const button = document.getElementById("unlockButton");
+
             try {
+                button.disabled = true;
 
-                const contract =
-                    await getContract();
+                const contract = await getContract();
+                const message = getVisitorMessage();
 
-                updateStatus(
-                    "🦊 Approve UNLOCK in MetaMask..."
-                );
+                updateStatus("🦊 Approve UNLOCK in your wallet...");
 
-                const transaction =
-                    await contract.unlock();
+                const transaction = await contract.unlock(message);
 
-                console.log(
-                    "UNLOCK transaction:",
-                    transaction.hash
-                );
+                console.log("UNLOCK transaction:", transaction.hash);
 
-                updateStatus(
-                    "⛓️ Waiting for blockchain confirmation..."
-                );
+                updateStatus("⛓️ Waiting for Monad confirmation...");
 
                 await transaction.wait();
 
-                updateStatus(
-                    "✅ UNLOCK confirmed on Sepolia"
-                );
+                updateStatus("✅ UNLOCK confirmed on Monad!");
+
+                document.getElementById("visitorMessage").value = "";
+                updateCharacterCount();
 
             } catch (error) {
-
-                console.error(
-                    "UNLOCK error:",
-                    error
-                );
+                console.error("UNLOCK error:", error);
 
                 if (
                     error.code === 4001 ||
@@ -282,8 +366,13 @@
                 ) {
                     updateStatus("❌ Transaction cancelled");
                 } else {
-                    updateStatus("❌ UNLOCK transaction failed");
+                    updateStatus(
+                        "❌ UNLOCK failed. Check the network, contract address, and wallet."
+                    );
                 }
+
+            } finally {
+                button.disabled = false;
             }
         }
 
@@ -299,19 +388,19 @@
             );
 
             if (!confirmed) {
-
                 updateStatus("Reset cancelled.");
-
                 return;
             }
 
-            try {
+            const button = document.getElementById("resetButton");
 
-                const contract =
-                    await getContract();
+            try {
+                button.disabled = true;
+
+                const contract = await getContract();
 
                 updateStatus(
-                    "🦊 Approve RESET_IDIOTBOX_WIFI in MetaMask..."
+                    "🦊 Approve RESET_IDIOTBOX_WIFI in your wallet..."
                 );
 
                 const transaction =
@@ -322,22 +411,16 @@
                     transaction.hash
                 );
 
-                updateStatus(
-                    "⛓️ Waiting for blockchain confirmation..."
-                );
+                updateStatus("⛓️ Waiting for Monad confirmation...");
 
                 await transaction.wait();
 
                 updateStatus(
-                    "✅ RESET_IDIOTBOX_WIFI confirmed on Sepolia"
+                    "✅ RESET_IDIOTBOX_WIFI confirmed on Monad!"
                 );
 
             } catch (error) {
-
-                console.error(
-                    "RESET_IDIOTBOX_WIFI error:",
-                    error
-                );
+                console.error("RESET_IDIOTBOX_WIFI error:", error);
 
                 if (
                     error.code === 4001 ||
@@ -346,52 +429,14 @@
                     updateStatus("❌ Transaction cancelled");
                 } else {
                     updateStatus(
-                        "❌ RESET_IDIOTBOX_WIFI transaction failed"
+                        "❌ RESET failed. Check the network, contract address, and wallet."
                     );
                 }
+
+            } finally {
+                button.disabled = false;
             }
         }
-
-        // ======================================================
-// LIVE IDIOTBOX CONNECTION STATUS
-// ======================================================
-
-const STATUS_URL =
-    "https://idiotbox-server.onrender.com/api/box-status/BOX-0002";
-
-async function checkIdiotBoxStatus() {
-    const statusElement = document.getElementById("status");
-
-    try {
-        const response = await fetch(STATUS_URL, {
-            cache: "no-store"
-        });
-
-        if (!response.ok) {
-            throw new Error("Could not retrieve box status.");
-        }
-
-        const data = await response.json();
-
-        if (data.ready) {
-            statusElement.innerText = "Ready.";
-        } else {
-            statusElement.innerText = "IdiotBox offline.";
-        }
-
-    } catch (error) {
-        console.error("Status check failed:", error);
-
-        statusElement.innerText =
-            "Unable to verify IdiotBox connection.";
-    }
-}
-
-// Check immediately when the page loads.
-checkIdiotBoxStatus();
-
-// Check again every 3 seconds.
-setInterval(checkIdiotBoxStatus, 3000);
 
     </script>
 
