@@ -97,12 +97,6 @@
             color: white;
         }
 
-        #resetButton {
-            background: #2196F3;
-            color: white;
-            font-size: 16px;
-        }
-
         button:disabled {
             opacity: 0.5;
             cursor: not-allowed;
@@ -168,10 +162,6 @@
 
     <button id="unlockButton" onclick="sendUnlock()">
         UNLOCK
-    </button>
-
-    <button id="resetButton" onclick="sendReset()">
-        RESET_IDIOTBOX_WIFI
     </button>
 
     <div id="status">Ready.</div>
@@ -368,68 +358,6 @@
                 } else {
                     updateStatus(
                         "❌ UNLOCK failed. Check the network, contract address, and wallet."
-                    );
-                }
-
-            } finally {
-                button.disabled = false;
-            }
-        }
-
-
-        // ======================================================
-        // RESET IDIOTBOX WIFI
-        // ======================================================
-
-        async function sendReset() {
-
-            const confirmed = confirm(
-                "RESET_IDIOTBOX_WIFI will erase the ESP32's saved Wi-Fi credentials and restart the IdiotBox.\n\nContinue?"
-            );
-
-            if (!confirmed) {
-                updateStatus("Reset cancelled.");
-                return;
-            }
-
-            const button = document.getElementById("resetButton");
-
-            try {
-                button.disabled = true;
-
-                const contract = await getContract();
-
-                updateStatus(
-                    "🦊 Approve RESET_IDIOTBOX_WIFI in your wallet..."
-                );
-
-                const transaction =
-                    await contract.resetIdiotBoxWiFi();
-
-                console.log(
-                    "RESET_IDIOTBOX_WIFI transaction:",
-                    transaction.hash
-                );
-
-                updateStatus("⛓️ Waiting for Monad confirmation...");
-
-                await transaction.wait();
-
-                updateStatus(
-                    "✅ RESET_IDIOTBOX_WIFI confirmed on Monad!"
-                );
-
-            } catch (error) {
-                console.error("RESET_IDIOTBOX_WIFI error:", error);
-
-                if (
-                    error.code === 4001 ||
-                    error.code === "ACTION_REJECTED"
-                ) {
-                    updateStatus("❌ Transaction cancelled");
-                } else {
-                    updateStatus(
-                        "❌ RESET failed. Check the network, contract address, and wallet."
                     );
                 }
 
