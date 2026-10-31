@@ -59,7 +59,7 @@
         #visitorMessage {
             box-sizing: border-box;
             width: 100%;
-            min-height: 110px;
+            min-height: 100px;
             padding: 12px;
             font-family: Arial, sans-serif;
             font-size: 16px;
@@ -118,103 +118,24 @@
             line-height: 1.5;
         }
 
-        /* Public blockchain activity table */
-        #activitySection {
-            width: 100%;
-            max-width: 1100px;
-            margin: 55px auto 20px;
-            text-align: left;
-        }
+        #activitySection { width:100%; max-width:1100px; margin:55px auto 20px; text-align:left; }
+        #activityTitle, #activityDescription, #activityStatus { text-align:center; }
+        #activityDescription, #activityStatus { color:#666; font-size:13px; }
+        #activityDescription { margin:0 0 18px; }
+        #activityStatus { margin:12px 0; }
+        #activityTableWrap { overflow-x:auto; background:white; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,.12); }
+        #activityTable { width:100%; min-width:760px; border-collapse:collapse; font-size:13px; }
+        #activityTable th, #activityTable td { padding:13px 14px; border-bottom:1px solid #e8e8e8; text-align:left; vertical-align:top; overflow-wrap:anywhere; }
+        #activityTable th { background:#f7f7f7; white-space:nowrap; }
+        #activityTable tr:last-child td { border-bottom:none; }
+        #activityTable a { color:#2459b3; text-decoration:none; }
+        #activityTable a:hover { text-decoration:underline; }
+        .activityAction { font-weight:bold; }
+        .activityLock { color:#269447; }
+        .activityUnlock { color:#d93636; }
+        .emptyActivity { text-align:center !important; color:#777; padding:22px !important; }
+        @media(max-width:600px) { #activitySection { margin-top:42px; } #activityTable th,#activityTable td { padding:11px 10px; } }
 
-        #activityTitle,
-        #activityDescription,
-        #activityStatus {
-            text-align: center;
-        }
-
-        #activityDescription,
-        #activityStatus {
-            color: #666;
-            font-size: 13px;
-        }
-
-        #activityDescription {
-            margin: 0 0 18px;
-        }
-
-        #activityStatus {
-            margin: 12px 0;
-        }
-
-        #activityTableWrap {
-            overflow-x: auto;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
-        }
-
-        #activityTable {
-            width: 100%;
-            min-width: 760px;
-            border-collapse: collapse;
-            font-size: 13px;
-        }
-
-        #activityTable th,
-        #activityTable td {
-            padding: 13px 14px;
-            border-bottom: 1px solid #e8e8e8;
-            text-align: left;
-            vertical-align: top;
-            overflow-wrap: anywhere;
-        }
-
-        #activityTable th {
-            background: #f7f7f7;
-            white-space: nowrap;
-        }
-
-        #activityTable tr:last-child td {
-            border-bottom: none;
-        }
-
-        #activityTable a {
-            color: #2459b3;
-            text-decoration: none;
-        }
-
-        #activityTable a:hover {
-            text-decoration: underline;
-        }
-
-        .activityAction {
-            font-weight: bold;
-        }
-
-        .activityLock {
-            color: #269447;
-        }
-
-        .activityUnlock {
-            color: #d93636;
-        }
-
-        .emptyActivity {
-            text-align: center !important;
-            color: #777;
-            padding: 22px !important;
-        }
-
-        @media (max-width: 600px) {
-            #activitySection {
-                margin-top: 42px;
-            }
-
-            #activityTable th,
-            #activityTable td {
-                padding: 11px 10px;
-            }
-        }
     </style>
 </head>
 
@@ -230,27 +151,31 @@
         </div>
     </div>
 
-    <!-- WRITE WHAT YOU'RE WISHING FOR -->
+    <!-- ================================================== -->
+    <!-- WRITE SOMETHING                                    -->
+    <!-- ================================================== -->
 
     <div id="messageBox">
 
         <label id="messageLabel" for="visitorMessage">
-            Write What You're Wishing For
+            Write Something (Optional)
         </label>
 
         <textarea
             id="visitorMessage"
             maxlength="280"
-            placeholder="What are you wishing for? (Optional)"
+            placeholder="Leave a message for the IdiotBox..."
             oninput="updateCharacterCount()"
         ></textarea>
 
-        <div id="characterCount">0 / 280 characters</div>
+        <div id="characterCount">
+            0 / 280 characters
+        </div>
 
     </div>
 
     <div id="privacyNote">
-        Your wish will be recorded publicly on the blockchain.
+        Your message will be recorded publicly on the blockchain.
         Do not enter passwords or private information.
     </div>
 
@@ -262,36 +187,22 @@
         UNLOCK
     </button>
 
-    <div id="status">Ready.</div>
+    <div id="status">
+        Ready.
+    </div>
 
-    <!-- Public activity history -->
     <section id="activitySection">
         <h2 id="activityTitle">Recent Blockchain Activity</h2>
-        <p id="activityDescription">
-            The latest LOCK and UNLOCK actions recorded on Monad.
-        </p>
+        <p id="activityDescription">The latest LOCK and UNLOCK actions recorded on Monad.</p>
         <div id="activityStatus">Loading blockchain activity...</div>
-
         <div id="activityTableWrap">
             <table id="activityTable">
-                <thead>
-                    <tr>
-                        <th>Wallet Address</th>
-                        <th>Transaction Hash</th>
-                        <th>Action</th>
-                        <th>Message</th>
-                    </tr>
-                </thead>
-                <tbody id="activityTableBody">
-                    <tr>
-                        <td class="emptyActivity" colspan="4">
-                            Loading activity...
-                        </td>
-                    </tr>
-                </tbody>
+                <thead><tr><th>Wallet Address</th><th>Transaction Hash</th><th>Action</th><th>Message</th></tr></thead>
+                <tbody id="activityTableBody"><tr><td class="emptyActivity" colspan="4">Loading activity...</td></tr></tbody>
             </table>
         </div>
     </section>
+
 
     <script>
 
@@ -300,17 +211,17 @@
         // ======================================================
 
         const contractAddress =
-            "0xf175e10a7731377A05AACf3D25C5C6FdBFA584de";
+            "0x2Ae68A1959fAc2aD720180572e7BCd672adf3804";
 
         // Monad Mainnet chain ID
         const MONAD_CHAIN_ID = 143n;
 
         const contractABI = [
-            "function lock(string message) public",
-            "function unlock(string message) public",
-            "event CommandIssued(uint256 indexed commandId, uint8 command, string commandName, address indexed issuedBy)",
-            "event MessageWritten(uint256 indexed commandId, uint8 command, string commandName, address indexed issuedBy, string message)"
-        ];
+    "function lock(string message) public",
+    "function unlock(string message) public",
+    "event CommandIssued(uint256 indexed commandId, uint8 command, string commandName, address indexed issuedBy)",
+    "event MessageWritten(uint256 indexed commandId, uint8 command, string commandName, address indexed issuedBy, string message)"
+];
 
 
         // ======================================================
@@ -323,10 +234,11 @@
 
 
         // ======================================================
-        // CHARACTER COUNT
+        // MESSAGE CHARACTER COUNT
         // ======================================================
 
         function updateCharacterCount() {
+
             const message =
                 document.getElementById("visitorMessage").value;
 
@@ -336,10 +248,11 @@
 
 
         // ======================================================
-        // GET WISH
+        // GET OPTIONAL MESSAGE
         // ======================================================
 
         function getVisitorMessage() {
+
             return document
                 .getElementById("visitorMessage")
                 .value
@@ -354,8 +267,9 @@
         async function getContract() {
 
             if (!window.ethereum) {
+
                 alert(
-                    "No compatible wallet detected. Open this page in your wallet's browser or use a browser with a compatible wallet."
+                    "No compatible wallet was detected. Open this page in your wallet's browser or install a compatible wallet."
                 );
 
                 throw new Error("Wallet not detected.");
@@ -366,9 +280,13 @@
             const provider =
                 new ethers.BrowserProvider(window.ethereum);
 
-            await provider.send("eth_requestAccounts", []);
+            await provider.send(
+                "eth_requestAccounts",
+                []
+            );
 
-            const network = await provider.getNetwork();
+            const network =
+                await provider.getNetwork();
 
             if (network.chainId !== MONAD_CHAIN_ID) {
 
@@ -380,10 +298,13 @@
                     "Please switch your wallet to Monad Mainnet before continuing."
                 );
 
-                throw new Error("Wrong network. Expected Monad Mainnet.");
+                throw new Error(
+                    "Wrong network. Expected Monad Mainnet (Chain ID 143)."
+                );
             }
 
-            const signer = await provider.getSigner();
+            const signer =
+                await provider.getSigner();
 
             return new ethers.Contract(
                 contractAddress,
@@ -394,109 +315,146 @@
 
 
         // ======================================================
-        // LOCK
+        // SEND LOCK COMMAND
         // ======================================================
 
         async function sendLock() {
 
-            const button = document.getElementById("lockButton");
+            const button =
+                document.getElementById("lockButton");
 
             try {
+
                 button.disabled = true;
 
-                const contract = await getContract();
-                const message = getVisitorMessage();
+                const contract =
+                    await getContract();
 
-                updateStatus("🦊 Approve LOCK in your wallet...");
+                const message =
+                    getVisitorMessage();
 
-                const transaction = await contract.lock(message);
+                updateStatus(
+                    "🦊 Approve LOCK in your wallet..."
+                );
 
-                console.log("LOCK transaction:", transaction.hash);
+                const transaction =
+                    await contract.lock(message);
 
-                updateStatus("⛓️ Waiting for Monad confirmation...");
+                console.log(
+                    "LOCK transaction:",
+                    transaction.hash
+                );
+
+                updateStatus(
+                    "⛓️ Waiting for Monad confirmation..."
+                );
 
                 await transaction.wait();
 
-                updateStatus("✅ LOCK confirmed on Monad!");
+                updateStatus(
+                    "✅ LOCK confirmed on Monad!"
+                );
 
                 document.getElementById("visitorMessage").value = "";
                 updateCharacterCount();
 
             } catch (error) {
+
                 console.error("LOCK error:", error);
 
                 if (
                     error.code === 4001 ||
                     error.code === "ACTION_REJECTED"
                 ) {
+
                     updateStatus("❌ Transaction cancelled");
+
                 } else {
+
                     updateStatus(
-                        "❌ LOCK failed. Check the network, contract address, and wallet."
+                        "❌ LOCK transaction failed. Check your wallet, network, and contract address."
                     );
                 }
 
             } finally {
+
                 button.disabled = false;
             }
         }
 
 
         // ======================================================
-        // UNLOCK
+        // SEND UNLOCK COMMAND
         // ======================================================
 
         async function sendUnlock() {
 
-            const button = document.getElementById("unlockButton");
+            const button =
+                document.getElementById("unlockButton");
 
             try {
+
                 button.disabled = true;
 
-                const contract = await getContract();
-                const message = getVisitorMessage();
+                const contract =
+                    await getContract();
 
-                updateStatus("🦊 Approve UNLOCK in your wallet...");
+                const message =
+                    getVisitorMessage();
 
-                const transaction = await contract.unlock(message);
+                updateStatus(
+                    "🦊 Approve UNLOCK in your wallet..."
+                );
 
-                console.log("UNLOCK transaction:", transaction.hash);
+                const transaction =
+                    await contract.unlock(message);
 
-                updateStatus("⛓️ Waiting for Monad confirmation...");
+                console.log(
+                    "UNLOCK transaction:",
+                    transaction.hash
+                );
+
+                updateStatus(
+                    "⛓️ Waiting for Monad confirmation..."
+                );
 
                 await transaction.wait();
 
-                updateStatus("✅ UNLOCK confirmed on Monad!");
+                updateStatus(
+                    "✅ UNLOCK confirmed on Monad!"
+                );
 
                 document.getElementById("visitorMessage").value = "";
                 updateCharacterCount();
 
             } catch (error) {
+
                 console.error("UNLOCK error:", error);
 
                 if (
                     error.code === 4001 ||
                     error.code === "ACTION_REJECTED"
                 ) {
+
                     updateStatus("❌ Transaction cancelled");
+
                 } else {
+
                     updateStatus(
-                        "❌ UNLOCK failed. Check the network, contract address, and wallet."
+                        "❌ UNLOCK transaction failed. Check your wallet, network, and contract address."
                     );
                 }
 
             } finally {
+
                 button.disabled = false;
             }
         }
 
 
-        // ======================================================
-        // PUBLIC LOCK / UNLOCK HISTORY
-        // Reads MessageWritten events from this contract.
-        // Viewing history does not require connecting a wallet.
-        // ======================================================
 
+        // Public, read-only history from the contract's MessageWritten events.
+        // No visitor wallet connection is needed to view this table.
         // ======================================================
         // PUBLIC LOCK / UNLOCK HISTORY
         // Reads indexed events through the existing Render server.
@@ -504,7 +462,7 @@
         // ======================================================
 
         const ACTIVITY_API_URL =
-            "https://idiotbox-server.onrender.com/api/box-activity/BOX-0002";
+            "https://idiotbox-server.onrender.com/api/box-activity/BOX-0001";
 
         const MONADSCAN_TX_URL = "https://monadscan.com/tx/";
         const MONADSCAN_ADDRESS_URL = "https://monadscan.com/address/";
