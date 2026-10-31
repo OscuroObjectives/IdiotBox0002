@@ -117,6 +117,104 @@
             font-size: 12px;
             line-height: 1.5;
         }
+
+        /* Public blockchain activity table */
+        #activitySection {
+            width: 100%;
+            max-width: 1100px;
+            margin: 55px auto 20px;
+            text-align: left;
+        }
+
+        #activityTitle,
+        #activityDescription,
+        #activityStatus {
+            text-align: center;
+        }
+
+        #activityDescription,
+        #activityStatus {
+            color: #666;
+            font-size: 13px;
+        }
+
+        #activityDescription {
+            margin: 0 0 18px;
+        }
+
+        #activityStatus {
+            margin: 12px 0;
+        }
+
+        #activityTableWrap {
+            overflow-x: auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+        }
+
+        #activityTable {
+            width: 100%;
+            min-width: 760px;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        #activityTable th,
+        #activityTable td {
+            padding: 13px 14px;
+            border-bottom: 1px solid #e8e8e8;
+            text-align: left;
+            vertical-align: top;
+            overflow-wrap: anywhere;
+        }
+
+        #activityTable th {
+            background: #f7f7f7;
+            white-space: nowrap;
+        }
+
+        #activityTable tr:last-child td {
+            border-bottom: none;
+        }
+
+        #activityTable a {
+            color: #2459b3;
+            text-decoration: none;
+        }
+
+        #activityTable a:hover {
+            text-decoration: underline;
+        }
+
+        .activityAction {
+            font-weight: bold;
+        }
+
+        .activityLock {
+            color: #269447;
+        }
+
+        .activityUnlock {
+            color: #d93636;
+        }
+
+        .emptyActivity {
+            text-align: center !important;
+            color: #777;
+            padding: 22px !important;
+        }
+
+        @media (max-width: 600px) {
+            #activitySection {
+                margin-top: 42px;
+            }
+
+            #activityTable th,
+            #activityTable td {
+                padding: 11px 10px;
+            }
+        }
     </style>
 </head>
 
@@ -166,6 +264,35 @@
 
     <div id="status">Ready.</div>
 
+    <!-- Public activity history -->
+    <section id="activitySection">
+        <h2 id="activityTitle">Recent Blockchain Activity</h2>
+        <p id="activityDescription">
+            The latest LOCK and UNLOCK actions recorded on Monad.
+        </p>
+        <div id="activityStatus">Loading blockchain activity...</div>
+
+        <div id="activityTableWrap">
+            <table id="activityTable">
+                <thead>
+                    <tr>
+                        <th>Wallet Address</th>
+                        <th>Transaction Hash</th>
+                        <th>Action</th>
+                        <th>Message</th>
+                    </tr>
+                </thead>
+                <tbody id="activityTableBody">
+                    <tr>
+                        <td class="emptyActivity" colspan="4">
+                            Loading activity...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
     <script>
 
         // ======================================================
@@ -179,11 +306,11 @@
         const MONAD_CHAIN_ID = 143n;
 
         const contractABI = [
-    "function lock(string message) public",
-    "function unlock(string message) public",
-    "event CommandIssued(uint256 indexed commandId, uint8 command, string commandName, address indexed issuedBy)",
-    "event MessageWritten(uint256 indexed commandId, uint8 command, string commandName, address indexed issuedBy, string message)"
-];
+            "function lock(string message) public",
+            "function unlock(string message) public",
+            "event CommandIssued(uint256 indexed commandId, uint8 command, string commandName, address indexed issuedBy)",
+            "event MessageWritten(uint256 indexed commandId, uint8 command, string commandName, address indexed issuedBy, string message)"
+        ];
 
 
         // ======================================================
@@ -362,6 +489,180 @@
                 button.disabled = false;
             }
         }
+
+
+        // ======================================================
+        // PUBLIC LOCK / UNLOCK HISTORY
+        // Reads MessageWritten events from this contract.
+        // Viewing history does not require connecting a wallet.
+        // ======================================================
+
+        const HISTORY_RPC_URL = "https://rpc-mainnet.monadinfra.com";
+        const MONADSCAN_TX_URL = "https://monadscan.com/tx/";
+        const MONADSCAN_ADDRESS_URL = "https://monadscan.com/address/";
+
+        const historyABI = [
+            "event MessageWritten(uint256 indexed commandId, uint8 command, string commandName, address indexed issuedBy, string message)"
+        ];
+
+        const historyProvider = new ethers.JsonRpcProvider(
+            HISTORY_RPC_URL,
+            { name: "Monad", chainId: 143 }
+        );
+
+        const historyContract = new ethers.Contract(
+            contractAddress,
+            historyABI,
+            historyProvider
+        );
+
+        // Scan recent blocks in smaller ranges to avoid oversized RPC log requests.
+        const HISTORY_LOOKBACK_BLOCKS = 20000;
+        const HISTORY_CHUNK_SIZE = 2000;
+        const HISTORY_REFRESH_MS = 12000;
+        const MAX_HISTORY_ROWS = 30;
+
+        let historyLastScannedBlock = null;
+        let historyRefreshRunning = false;
+        const seenHistoryEvents = new Set();
+        const historyEvents = [];
+
+        function renderActivityRows() {
+            const tbody = document.getElementById("activityTableBody");
+            tbody.replaceChildren();
+
+            const sortedEvents = [...historyEvents].sort((a, b) =>
+                b.blockNumber - a.blockNumber || b.index - a.index
+            );
+
+            if (sortedEvents.length === 0) {
+                const row = document.createElement("tr");
+                const cell = document.createElement("td");
+                cell.colSpan = 4;
+                cell.className = "emptyActivity";
+                cell.textContent = "No LOCK or UNLOCK activity found yet.";
+                row.appendChild(cell);
+                tbody.appendChild(row);
+                return;
+            }
+
+            for (const event of sortedEvents.slice(0, MAX_HISTORY_ROWS)) {
+                const row = document.createElement("tr");
+
+                const walletCell = document.createElement("td");
+                const walletLink = document.createElement("a");
+                walletLink.href = MONADSCAN_ADDRESS_URL + event.issuedBy;
+                walletLink.target = "_blank";
+                walletLink.rel = "noopener noreferrer";
+                walletLink.textContent = event.issuedBy;
+                walletCell.appendChild(walletLink);
+                row.appendChild(walletCell);
+
+                const hashCell = document.createElement("td");
+                const hashLink = document.createElement("a");
+                hashLink.href = MONADSCAN_TX_URL + event.transactionHash;
+                hashLink.target = "_blank";
+                hashLink.rel = "noopener noreferrer";
+                hashLink.textContent = event.transactionHash;
+                hashCell.appendChild(hashLink);
+                row.appendChild(hashCell);
+
+                const actionCell = document.createElement("td");
+                actionCell.textContent = event.commandName;
+                actionCell.className = event.commandName === "LOCK"
+                    ? "activityAction activityLock"
+                    : "activityAction activityUnlock";
+                row.appendChild(actionCell);
+
+                const messageCell = document.createElement("td");
+                messageCell.textContent = event.message || "";
+                row.appendChild(messageCell);
+
+                tbody.appendChild(row);
+            }
+        }
+
+        async function loadBlockchainActivity() {
+            if (historyRefreshRunning) return;
+            historyRefreshRunning = true;
+
+            const status = document.getElementById("activityStatus");
+
+            try {
+                const latestBlock = await historyProvider.getBlockNumber();
+
+                if (historyLastScannedBlock === null) {
+                    historyLastScannedBlock = Math.max(
+                        0,
+                        latestBlock - HISTORY_LOOKBACK_BLOCKS
+                    );
+                }
+
+                while (historyLastScannedBlock < latestBlock) {
+                    const fromBlock = historyLastScannedBlock + 1;
+                    const toBlock = Math.min(
+                        fromBlock + HISTORY_CHUNK_SIZE - 1,
+                        latestBlock
+                    );
+
+                    const logs = await historyContract.queryFilter(
+                        historyContract.filters.MessageWritten(),
+                        fromBlock,
+                        toBlock
+                    );
+
+                    for (const log of logs) {
+                        const eventKey =
+                            log.transactionHash + ":" + log.index;
+
+                        if (seenHistoryEvents.has(eventKey)) continue;
+                        seenHistoryEvents.add(eventKey);
+
+                        const args = log.args;
+                        const commandName =
+                            String(args.commandName || "").toUpperCase();
+
+                        if (
+                            commandName !== "LOCK" &&
+                            commandName !== "UNLOCK"
+                        ) {
+                            continue;
+                        }
+
+                        historyEvents.push({
+                            blockNumber: log.blockNumber,
+                            index: log.index,
+                            transactionHash: log.transactionHash,
+                            issuedBy: args.issuedBy,
+                            commandName: commandName,
+                            message: args.message || ""
+                        });
+                    }
+
+                    historyLastScannedBlock = toBlock;
+                }
+
+                renderActivityRows();
+                status.textContent =
+                    "Live blockchain history · Updated automatically";
+
+            } catch (error) {
+                console.error(
+                    "Could not load blockchain activity:",
+                    error
+                );
+
+                status.textContent =
+                    "Unable to load activity right now. Retrying automatically...";
+
+            } finally {
+                historyRefreshRunning = false;
+            }
+        }
+
+        // Initial load, then refresh periodically for new transactions.
+        loadBlockchainActivity();
+        setInterval(loadBlockchainActivity, HISTORY_REFRESH_MS);
 
     </script>
 
